@@ -9,11 +9,10 @@ OUTPUT=output/$PROJECT
 rm -rf $OUTPUT
 mkdir -p $OUTPUT/third_party
 
-cp $HOME/$PROJECTS/$PROJECT/third_party.bzl $OUTPUT/ 
-cp $HOME/$PROJECTS/$PROJECT/third_party/*bzl $OUTPUT/third_party/
+cp artifacts.star $OUTPUT
 
 # convert bzl -> starlark
-./convert.py $OUTPUT
+./convert.py $HOME/$PROJECTS/$PROJECT $OUTPUT
 
 # generate maven.artifacts
 # get starlark-go:
@@ -21,7 +20,9 @@ cp $HOME/$PROJECTS/$PROJECT/third_party/*bzl $OUTPUT/third_party/
 
 cd $OUTPUT || exit
 
-starlark third_party.star 
+mkdir -p $HOME/$PROJECTS/$PROJECT/third_party/maven
+
+starlark artifacts.star 2>&1 | buildifier --type=bzl > $HOME/$PROJECTS/$PROJECT/third_party/maven/local_repo_artifacts.bzl
 
 
 

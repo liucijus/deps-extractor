@@ -3,8 +3,8 @@
 import glob
 import sys
 
-DIR = sys.argv[1]
-
+INPUT_DIR = sys.argv[1]
+OUTPUT_DIR = sys.argv[2]
 
 pattern = '/third_party/*.bzl'
 
@@ -46,25 +46,29 @@ def convert(content, import_prefix):
             convert_excludes(
                 line
                     .replace('//:third_party', 'third_party')
-                    .replace(IMPORT_LINE,
-                             'load("' + import_prefix + 'import_external.star", "import_external")')
+                    .replace(IMPORT_LINE, 'load("' + import_prefix + 'import_external.star", "import_external")')
                     .replace('.bzl', '.star')
             )
             for line in content
-            if ":macros.bzl" not in line
+            if ":macros.bzl" not in line  # fixme
         ]
     )
 
 
 def write_star(content, file):
-    if "third_party.star" in file:
-        content.append("third_party_dependencies()")
+    # if "third_party.star" in file:
+    #     content.append("third_party_dependencies()")
 
     with open(file, 'w') as f:
         f.writelines(content)
 
 
-for bzl in glob.glob(DIR + pattern) + glob.glob(DIR + "/third_party.bzl"):
+for bzl in glob.glob(INPUT_DIR + pattern) + glob.glob(INPUT_DIR + "/third_party.bzl"):
     bzl_content = read_bzl(bzl)
-    star_content = convert(bzl_content, '../..' + bzl[len(DIR)])
-    write_star(star_content, bzl.replace(".bzl", ".star"))
+
+    file_name = bzl[len(INPUT_DIR):]
+    star_content = convert(bzl_content, '../..' + bzl[len(INPUT_DIR)])
+
+    output_file = OUTPUT_DIR + '/' + file_name.replace(".bzl", ".star")
+
+    write_star(star_content, output_file)
