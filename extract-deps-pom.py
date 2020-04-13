@@ -119,14 +119,14 @@ def find_deps(deps, vars):
 
         dep_struct['exclusions'] = dep_exclusions
 
-        if scope != None:
+        if scope is not None:
             scope_value = scope.text
             if scope_value == 'compile':
                 dep_struct['neverlink'] = True
             elif scope_value == 'test':
                 dep_struct['testonly'] = True
 
-        if classifier != None:
+        if classifier is not None:
             dep_struct['classifier'] = "'" + classifier.text + "'"
 
         resolved_deps2.append(dep_struct)
