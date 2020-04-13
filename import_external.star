@@ -54,15 +54,14 @@ def import_external(
         lines.append('    ' + ', '.join(params) + ',')
 
         if len(excludes) > 0:
-            lines.append('    exclusions = [')
+            lines.append('exclusions = [')
             for exclude in excludes:
                 parts = exclude.split(':')
-                lines.append('        maven.exclusion(')
-                lines.append('            group = "' + parts[0] + '",', )
-                lines.append('            artifact = "' + parts[1] + '",', )
-                lines.append('        ),')
-
-            lines.append('    ],')
+                if len(parts) == 2 and parts[1] != '':
+                    lines.append("'" + exclude + "',")
+                else:
+                    lines.append("# fixme '" + exclude + "',")
+            lines.append('],')
 
         lines.append(')')
 
