@@ -191,7 +191,7 @@ output.append('')
 
 output.append('MANAGED_DEPS=[')
 for line in print_as_maven_struct(all_deps_struct):
-    output.append('    ' + line)
+    output.append(line)
 output.append(']')
 
 print('\n'.join(output))
