@@ -1,8 +1,8 @@
 #!/bin/bash
 
-PROJECTS=projects
+REPO_PATH=$1
 
-PROJECT=$1
+PROJECT=$(basename $REPO_PATH)
 
 OUTPUT=output/$PROJECT
 
@@ -12,7 +12,7 @@ mkdir -p $OUTPUT/third_party
 cp artifacts.star $OUTPUT/
 
 # convert bzl -> starlark
-./convert.py $HOME/$PROJECTS/$PROJECT $OUTPUT
+./convert.py $REPO_PATH $OUTPUT
 
 # generate maven.artifacts
 # get starlark-go:
@@ -20,11 +20,13 @@ cp artifacts.star $OUTPUT/
 
 cd $OUTPUT || exit
 
-mkdir -p $HOME/$PROJECTS/$PROJECT/third_party/maven
+mkdir -p $REPO_PATH/third_party/maven
 
+# run patched files via starlark to generate artifacts.bzl
 starlark artifacts.star 2>&1 | buildifier --type=bzl > local_repo_artifacts.bzl
 
-cp local_repo_artifacts.bzl $HOME/$PROJECTS/$PROJECT/third_party/maven/
+# copy generated file to repo
+cp local_repo_artifacts.bzl $REPO_PATH/third_party/maven/
 
 
 
