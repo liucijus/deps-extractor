@@ -2,14 +2,14 @@
 
 PROJECTS=projects
 
-PROJECT=wix-ci-original
+PROJECT=$1
 
 OUTPUT=output/$PROJECT
 
 rm -rf $OUTPUT
 mkdir -p $OUTPUT/third_party
 
-cp artifacts.star $OUTPUT
+cp artifacts.star $OUTPUT/
 
 # convert bzl -> starlark
 ./convert.py $HOME/$PROJECTS/$PROJECT $OUTPUT
@@ -22,7 +22,9 @@ cd $OUTPUT || exit
 
 mkdir -p $HOME/$PROJECTS/$PROJECT/third_party/maven
 
-starlark artifacts.star 2>&1 | buildifier --type=bzl > $HOME/$PROJECTS/$PROJECT/third_party/maven/local_repo_artifacts.bzl
+starlark artifacts.star 2>&1 | buildifier --type=bzl > local_repo_artifacts.bzl
+
+cp local_repo_artifacts.bzl $HOME/$PROJECTS/$PROJECT/third_party/maven/
 
 
 

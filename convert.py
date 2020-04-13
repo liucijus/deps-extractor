@@ -24,18 +24,18 @@ def join_excludes(content):
     for line in content:
         if 'excludes = ' not in line:
             if len(exclude_accu) > 0:
-                lines.append("        excludes = [\n" + "".join(exclude_accu) + "        ],\n")
+                lines.append("excludes = [\n" + "".join(exclude_accu) + "],\n")
             exclude_accu = []
             lines.append(line)
         else:
-            exclude_accu.append(line.replace('    excludes = ', '         '))
+            exclude_accu.append(line.replace('excludes = ', ''))
 
     return lines
 
 
 def convert_excludes(line):
     if 'EXCLUDES' in line:
-        return line.replace('\n', '').replace('# EXCLUDES ', 'excludes =  "') + '",\n'
+        return line.replace('\n', '').replace('# EXCLUDES ', 'excludes = "') + '",\n'
     else:
         return line
 
@@ -56,9 +56,6 @@ def convert(content, import_prefix):
 
 
 def write_star(content, file):
-    # if "third_party.star" in file:
-    #     content.append("third_party_dependencies()")
-
     with open(file, 'w') as f:
         f.writelines(content)
 
