@@ -2,11 +2,11 @@
 
 import sys
 
-POM_FILE = sys.argv[1]
-
 import collections
 import re
 import xml.etree.ElementTree as ET
+
+POM_FILE = sys.argv[1]
 
 root = ET.parse(POM_FILE).getroot()
 m = 'http://maven.apache.org/POM/4.0.0'
@@ -127,7 +127,7 @@ def find_deps(deps, vars):
                 dep_struct['testonly'] = True
 
         if classifier is not None:
-            dep_struct['classifier'] = "'" + classifier.text + "'"
+            dep_struct['classifier'] = f"'{classifier.text}'"
 
         resolved_deps2.append(dep_struct)
 
@@ -136,7 +136,10 @@ def find_deps(deps, vars):
 
 all_vars = find_vars(root.find('m:properties', nss))
 
-all_deps_struct = find_deps(root.find('m:dependencyManagement/m:dependencies', nss), all_vars)
+all_deps_struct = find_deps(
+        root.find('m:dependencyManagement/m:dependencies', nss),
+        all_vars,
+)
 
 
 def args_to_string(dep):
@@ -146,10 +149,12 @@ def args_to_string(dep):
         if key == 'exclusions':
             for exclusion in dep[key]:
                 exclusion_value = exclusion
-                args_for_exclusion = "artifact='%s', group='%s'" % (
-                    exclusion_value['artifact'], exclusion_value['group'])
+                args_for_exclusion = "artifact='{a}', group='{g}'".format(
+                    a=exclusion_value['artifact'],
+                    g=exclusion_value['group'],
+                )
 
-                exclusion_arg = 'maven.exclusion(' + args_for_exclusion + ')'
+                exclusion_arg = f'maven.exclusion({args_for_exclusion})'
                 exclusion_args.append(exclusion_arg)
             if exclusion_args:
                 args.append('exclusions=[' + ','.join(exclusion_args) + ']')
@@ -160,38 +165,28 @@ def args_to_string(dep):
 
 
 def print_as_maven_struct(deps):
-    lines = []
-    for dep in deps:
-        lines.append('maven.artifact(' + args_to_string(dep) + '),')
-
-    return lines
+    return [f'maven.artifact({args_to_string(dep)}),' for dep in deps]
 
 
 def print_vars(vars):
-    lines = []
-    for var in vars:
-        var_value = vars[var]
-
-        if var_value['type'] == 'const':
-            lines.append(var_value['var'] + '="' + var_value['version'] + '"')
+    def mk_var(var):
+        if var['type'] == 'const':
+            return '{var} = "{version}"'.format(**var)
         else:
-            lines.append(var_value['var'] + '=' + var_value['version'])
-    return lines
+            return '{var} = {version}'.format(**var)
+
+    return [mk_var(v) for v in vars.values()]
 
 
 output = []
 output.append('load("@rules_jvm_external//:defs.bzl", "maven_install")')
 output.append('load("@rules_jvm_external//:specs.bzl", "maven")')
 output.append('')
-
-for line in print_vars(all_vars):
-    output.append(line)
-
+output.extend(print_vars(all_vars))
 output.append('')
 
 output.append('MANAGED_DEPS=[')
-for line in print_as_maven_struct(all_deps_struct):
-    output.append(line)
+output.extend(print_as_maven_struct(all_deps_struct))
 output.append(']')
 
 print('\n'.join(output))
