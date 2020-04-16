@@ -5,6 +5,7 @@ import sys
 import collections
 import re
 import xml.etree.ElementTree as ET
+import itertools
 
 POM_FILE = sys.argv[1]
 
@@ -169,24 +170,37 @@ def print_as_maven_struct(deps):
 
 
 def print_vars(vars):
-    def mk_var(var):
-        if var['type'] == 'const':
-            return '{var} = "{version}"'.format(**var)
-        else:
-            return '{var} = {version}'.format(**var)
+    # assuming only 1 level of references
+    consts = filter(lambda v: v['type'] == 'const', vars.values())
+    refs = filter(lambda v: v['type'] != 'const', vars.values())
 
-    return [mk_var(v) for v in vars.values()]
+    def mk_const(var):
+        return '{var} = "{version}"'.format(**var)
+
+    def mk_ref(var):
+        return '{var} = {version}'.format(**var)
+
+    return itertools.chain(
+            sorted(list(map(mk_const, consts))),
+            [''],
+            sorted(list(map(mk_ref, refs))),
+    )
 
 
-output = []
-output.append('load("@rules_jvm_external//:defs.bzl", "maven_install")')
-output.append('load("@rules_jvm_external//:specs.bzl", "maven")')
-output.append('')
-output.extend(print_vars(all_vars))
-output.append('')
-
-output.append('MANAGED_DEPS=[')
-output.extend(print_as_maven_struct(all_deps_struct))
-output.append(']')
-
+output = list(itertools.chain(
+    [
+        'load("@rules_jvm_external//:defs.bzl", "maven_install")',
+        'load("@rules_jvm_external//:specs.bzl", "maven")',
+        '',
+    ],
+    print_vars(all_vars),
+    [
+        '',
+        'MANAGED_DEPS=[',
+    ],
+    print_as_maven_struct(all_deps_struct),
+    [
+        ']',
+    ],
+))
 print('\n'.join(output))
