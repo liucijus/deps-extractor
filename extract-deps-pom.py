@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 
-import sys
-
 import collections
-import re
-import xml.etree.ElementTree as ET
 import itertools
+import re
+import sys
+import xml.etree.ElementTree as ET
 
 POM_FILE = sys.argv[1]
 
@@ -13,6 +12,12 @@ root = ET.parse(POM_FILE).getroot()
 m = 'http://maven.apache.org/POM/4.0.0'
 m_ns = '{' + m + '}'
 nss = {'m': m}
+
+IGNORED_PROPERTIES = [
+    'site_domain',
+    'project_url',
+    'site_full_path'
+]
 
 
 def short(value):
@@ -48,7 +53,8 @@ def find_vars(properties):
     vars = collections.OrderedDict()
     for p in properties:
         short_version = short(p.tag)
-        vars['${' + short_version + '}'] = parse_value(p.text, short_version)
+        if short_version not in IGNORED_PROPERTIES:
+            vars['${' + short_version + '}'] = parse_value(p.text, short_version)
 
     return vars
 
@@ -138,8 +144,8 @@ def find_deps(deps, vars):
 all_vars = find_vars(root.find('m:properties', nss))
 
 all_deps_struct = find_deps(
-        root.find('m:dependencyManagement/m:dependencies', nss),
-        all_vars,
+    root.find('m:dependencyManagement/m:dependencies', nss),
+    all_vars,
 )
 
 
@@ -159,6 +165,8 @@ def args_to_string(dep):
                 exclusion_args.append(exclusion_arg)
             if exclusion_args:
                 args.append('exclusions=[' + ','.join(exclusion_args) + ']')
+        elif key == 'testonly':
+            args.append(key + '= TESTONLY_TOGGLE')
         else:
             args.append(key + '=' + str(dep[key]))
 
@@ -181,22 +189,34 @@ def print_vars(vars):
         return '{var} = {version}'.format(**var)
 
     return itertools.chain(
-            sorted(list(map(mk_const, consts))),
-            [''],
-            sorted(list(map(mk_ref, refs))),
+        sorted(list(map(mk_const, consts))),
+        [''],
+        sorted(list(map(mk_ref, refs))),
     )
 
 
 output = list(itertools.chain(
     [
-        'load("@rules_jvm_external//:defs.bzl", "maven_install")',
         'load("@rules_jvm_external//:specs.bzl", "maven")',
+        '',
+        '# fixme: disables testonly due to conflicting definitions',
+        'TESTONLY_TOGGLE = False',
         '',
     ],
     print_vars(all_vars),
     [
         '',
-        'MANAGED_DEPS=[',
+        'LOST_AND_FOUND = [',
+        '    "org.apache.logging.log4j:log4j-core:jar:2.13.1",',
+        '    "dev.zio:zio-macros-core_2.12:0.6.2",',
+        ']',
+        '',
+        'GLOBAL_EXCLUSIONS = [',
+        '    "org.scalamacros:paradise_2.12.1",',
+        ']',
+        '',
+        '',
+        'MANAGED_DEPS = LOST_AND_FOUND + [',
     ],
     print_as_maven_struct(all_deps_struct),
     [
